@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SealBook — Sealcoating &amp; Striping Estimator</title>
+<style>
+:root{
+  --ink:#1c2430; --mut:#5b6675; --line:#d8dde5; --bg:#f4f5f7; --card:#fff;
+  --brand:#232a35; --brand2:#39434f; --acc:#f5a623; --accD:#c77f0a;
+  --good:#1e7d46; --bad:#c0392b; --warn:#b7791f;
+  --radius:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.45}
+header{background:var(--brand);color:#fff;padding:14px 16px;position:sticky;top:0;z-index:20;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+header .row{max-width:1060px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{font-size:22px;font-weight:800;letter-spacing:.3px}
+.logo span{color:var(--acc)}
+.tag{color:#c8cfd8;font-size:12.5px}
+nav{max-width:1060px;margin:10px auto 0;display:flex;gap:6px;flex-wrap:wrap}
+nav button{background:var(--brand2);color:#e8ecf1;border:1px solid #4a5563;padding:8px 14px;border-radius:999px;font-size:14px;cursor:pointer;min-height:40px}
+nav button.on{background:var(--acc);color:#231a05;border-color:var(--acc);font-weight:700}
+main{max-width:1060px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+h2{margin:0 0 10px;font-size:19px}
+h3{margin:14px 0 8px;font-size:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.stat{background:#fafbfc;border:1px solid var(--line);border-radius:8px;padding:12px}
+.stat .v{font-size:22px;font-weight:800}
+.stat .l{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px}
+label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
+input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:15px;background:#fff;color:var(--ink);min-height:44px}
+textarea{min-height:64px;resize:vertical}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+@media(max-width:640px){.cols{grid-template-columns:1fr}}
+.btn{display:inline-block;background:var(--brand);color:#fff;border:none;padding:11px 18px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;min-height:44px}
+.btn.acc{background:var(--acc);color:#231a05}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.btn.sm{padding:7px 12px;font-size:13px;min-height:36px}
+.btn.danger{background:var(--bad)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut)}
+td.num,th.num{text-align:right}
+.kv{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed var(--line)}
+.kv b{text-align:right}
+.kv.total{font-size:17px;border-bottom:none;border-top:2px solid var(--ink);margin-top:6px;padding-top:10px}
+.pos{color:var(--good);font-weight:700}.neg{color:var(--bad);font-weight:700}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700;background:#eef1f5;color:var(--brand2)}
+.pill.booked{background:#fdf0d3;color:#7a5410}.pill.done{background:#dff3e5;color:#14532d}.pill.paid{background:#14532d;color:#fff}.pill.quoted{background:#e4ebf7;color:#274b73}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:8px}
+.opt{border:2px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;background:#fff}
+.opt.sel{border-color:var(--acc);background:#fffaf0}
+.opt .p{font-size:24px;font-weight:800}
+.opt .n{font-weight:800;text-transform:uppercase;font-size:12px;letter-spacing:.6px;color:var(--mut)}
+.mut{color:var(--mut);font-size:13px}
+.warnbox{background:#fdf6e0;border:1px solid #ecd28a;border-radius:8px;padding:10px 12px;font-size:13.5px;margin-top:10px}
+footer{max-width:1060px;margin:0 auto;padding:6px 16px 30px;color:var(--mut);font-size:12.5px}
+#printArea{display:none}
+@media print{
+  body{background:#fff}
+  header,main,footer{display:none !important}
+  #printArea{display:block !important;padding:24px;font-size:13px}
+  #printArea h1{font-size:20px;margin:0 0 2px}
+  #printArea table th,#printArea table td{border-bottom:1px solid #bbb}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="row">
+    <div class="logo">Seal<span>Book</span></div>
+    <div class="tag">Sealcoating &amp; striping estimator — price from coverage math, not guesses.</div>
+  </div>
+  <nav id="tabs">
+    <button data-tab="dash" class="on">Dashboard</button>
+    <button data-tab="est">Estimator</button>
+    <button data-tab="jobs">Job Book</button>
+    <button data-tab="settings">Settings</button>
+    <button data-tab="help">Help</button>
+  </nav>
+</header>
+
+<main>
+  <!-- DASHBOARD -->
+  <section id="view-dash">
+    <div class="card">
+      <h2>Money picture</h2>
+      <div class="grid" id="dashStats"></div>
+    </div>
+    <div class="card">
+      <h2>Booked &amp; upcoming</h2>
+      <div id="dashUpcoming"></div>
+    </div>
+    <div class="card">
+      <h2>Recent jobs</h2>
+      <div id="dashRecent"></div>
+    </div>
+  </section>
+
+  <!-- ESTIMATOR -->
+  <section id="view-est" style="display:none">
+    <div class="card">
+      <h2>New estimate</h2>
+      <div class="cols">
+        <div>
+          <label>Customer name *</label>
+          <input id="eCustomer" type="text" placeholder="e.g. Maple Grove Plaza">
+          <label>Phone</label>
+          <input id="ePhone" type="text" placeholder="555-0100">
+          <label>Address / lot</label>
+          <input id="eAddress" type="text" placeholder="Street, city">
+        </div>
+        <div>
+          <label>Job date</label>
+          <input id="eDate" type="date">
+          <label>Notes</label>
+          <textarea id="eNotes" placeholder="Gate code, lot must be empty by 6 AM, etc."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Sealcoating</h3>
+      <div class="cols">
+        <div>
+          <label>Lot size (sq ft, measured)</label>
+          <input inputmode="decimal" id="eSqft" type="number" min="0" step="any" value="0">
+        </div>
+        <div>
+          <label>Other job costs ($) — fuel, disposal, rentals</label>
+          <input inputmode="decimal" id="eOther" type="number" min="0" step="any" value="0">
+        </div>
+      </div>
+      <p class="mut">Coats and sealer grade are chosen by the Good / Better / Best option below — the option you pick is what gets saved on the job.</p>
+    </div>
+
+    <div class="card">
+      <h3>Crack fill</h3>
+      <label>Crack fill (linear ft)</label>
+      <input inputmode="decimal" id="eCrack" type="number" min="0" step="any" value="0">
+    </div>
+
+    <div class="card">
+      <h3>Striping</h3>
+      <div class="cols">
+        <div>
+          <label>Standard stalls (count)</label>
+          <input inputmode="decimal" id="eStalls" type="number" min="0" step="1" value="0">
+          <label>ADA stalls (count)</label>
+          <input inputmode="decimal" id="eAda" type="number" min="0" step="1" value="0">
+        </div>
+        <div>
+          <label>Curb / fire-lane / line striping (linear ft)</label>
+          <input inputmode="decimal" id="eCurb" type="number" min="0" step="any" value="0">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Extras</h3>
+      <div id="extrasList"></div>
+      <div class="cols">
+        <div><label>Extra label</label><input id="xLabel" type="text" placeholder="Oil-spot priming, patching, signs…"></div>
+        <div><label>Extra amount ($)</label><input inputmode="decimal" id="xAmount" type="number" min="0" step="any" value="0"></div>
+      </div>
+      <p><button class="btn ghost sm" id="addExtraBtn" type="button">+ Add extra</button></p>
+
+      <h3>Good / Better / Best</h3>
+      <div class="opts" id="optCards"></div>
+
+      <h3>Cost &amp; price breakdown</h3>
+      <div id="breakdown"></div>
+      <div id="estWarn"></div>
+      <p style="margin-top:14px">
+        <button class="btn acc" id="saveJobBtn" type="button">Save to job book</button>
+        <button class="btn ghost" id="printQuoteBtn" type="button">Print quote sheet</button>
+      </p>
+    </div>
+  </section>
+
+  <!-- JOBS -->
+  <section id="view-jobs" style="display:none">
+    <div class="card">
+      <h2>Job book</h2>
+      <label>Filter by status</label>
+      <select id="jobFilter">
+        <option value="">All jobs</option>
+        <option>Quoted</option><option>Booked</option><option>Done</option><option>Paid</option>
+      </select>
+      <div id="jobList" style="margin-top:12px"></div>
+    </div>
+    <div class="card" id="jobDetail" style="display:none"></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="view-settings" style="display:none">
+    <div class="card">
+      <h2>Your business</h2>
+      <div class="cols">
+        <div>
+          <label>Company name</label><input id="sCompany" type="text">
+          <label>Phone</label><input id="sPhone" type="text">
+        </div>
+        <div>
+          <label>Email</label><input id="sEmail" type="text">
+          <label>Quote footer notes (prints on every quote)</label><textarea id="sQuoteNotes"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Material rates</h2>
+      <div class="cols">
+        <div>
+          <label>Sealer coverage (sq ft per gallon, per coat)</label><input inputmode="decimal" id="sSfPerGal" type="number" min="1" step="any">
+          <label>Standard sealer ($ per gallon)</label><input inputmode="decimal" id="sSealerStd" type="number" min="0" step="any">
+          <label>Premium sealer ($ per gallon)</label><input inputmode="decimal" id="sSealerPrem" type="number" min="0" step="any">
+          <label>Sand additive ($ per gallon of sealer)</label><input inputmode="decimal" id="sSand" type="number" min="0" step="any">
+        </div>
+        <div>
+          <label>Crack filler material ($ per linear ft)</label><input inputmode="decimal" id="sCrackMat" type="number" min="0" step="any">
+          <label>Traffic paint ($ per gallon)</label><input inputmode="decimal" id="sPaintGal" type="number" min="0" step="any">
+          <label>Paint coverage (linear ft of 4-in line per gallon)</label><input inputmode="decimal" id="sPaintCov" type="number" min="1" step="any">
+          <label>Line length per standard stall (ft)</label><input inputmode="decimal" id="sStallLf" type="number" min="0" step="any">
+          <label>Line length per ADA stall (ft)</label><input inputmode="decimal" id="sAdaLf" type="number" min="0" step="any">
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Price rates</h2>
+      <div class="cols">
+        <div>
+          <label>Sealcoat, 1 coat ($ per sq ft)</label><input inputmode="decimal" id="sRate1" type="number" min="0" step="any">
+          <label>Sealcoat, 2 coats ($ per sq ft)</label><input inputmode="decimal" id="sRate2" type="number" min="0" step="any">
+          <label>Premium sealer adder ($ per sq ft)</label><input inputmode="decimal" id="sPremAdd" type="number" min="0" step="any">
+          <label>Crack fill ($ per linear ft)</label><input inputmode="decimal" id="sCrackRate" type="number" min="0" step="any">
+        </div>
+        <div>
+          <label>Standard stall ($ each)</label><input inputmode="decimal" id="sStallRate" type="number" min="0" step="any">
+          <label>ADA stall ($ each)</label><input inputmode="decimal" id="sAdaRate" type="number" min="0" step="any">
+          <label>Curb / line striping ($ per linear ft)</label><input inputmode="decimal" id="sCurbRate" type="number" min="0" step="any">
+          <label>Minimum job charge ($)</label><input inputmode="decimal" id="sMinCharge" type="number" min="0" step="any">
+          <label>Sales tax % (0 = none)</label><input inputmode="decimal" id="sTax" type="number" min="0" step="any">
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Labor</h2>
+      <div class="cols">
+        <div>
+          <label>Labor rate ($ per person-hour)</label><input inputmode="decimal" id="sLaborRate" type="number" min="0" step="any">
+          <label>Crew size (people)</label><input inputmode="decimal" id="sCrew" type="number" min="1" step="1">
+          <label>Setup / mobilization (hours per job)</label><input inputmode="decimal" id="sSetup" type="number" min="0" step="any">
+        </div>
+        <div>
+          <label>Sealing production (sq ft per crew-hour, 1 coat)</label><input inputmode="decimal" id="sProdSeal" type="number" min="1" step="any">
+          <label>Crack fill production (linear ft per crew-hour)</label><input inputmode="decimal" id="sProdCrack" type="number" min="1" step="any">
+          <label>Striping production (linear ft per crew-hour)</label><input inputmode="decimal" id="sProdStripe" type="number" min="1" step="any">
+        </div>
+      </div>
+      <p style="margin-top:14px"><button class="btn acc" id="saveSettingsBtn" type="button">Save settings</button></p>
+    </div>
+    <div class="card">
+      <h2>Data</h2>
+      <p>
+        <button class="btn ghost" id="exportBtn" type="button">Export backup (JSON)</button>
+        <button class="btn ghost" id="importBtn" type="button">Import backup</button>
+        <input id="importFile" type="file" accept=".json,application/json" style="display:none">
+      </p>
+      <p>
+        <button class="btn ghost" id="clearDemoBtn" type="button">Clear sample data</button>
+        <button class="btn danger" id="wipeBtn" type="button">Erase everything</button>
+      </p>
+      <p class="mut">Your data lives only in this browser on this device. Export a backup before switching devices or clearing browser data.</p>
+    </div>
+  </section>
+
+  <!-- HELP -->
+  <section id="view-help" style="display:none">
+    <div class="card">
+      <h2>How SealBook prices a job</h2>
+      <p><b>Sealer is computed, not guessed.</b> Enter the measured square footage and SealBook works out the gallons from your coverage rate (sq ft per gallon per coat, in Settings), then costs the sealer and sand additive at your per-gallon prices. Two coats and premium sealer change the material bill automatically.</p>
+      <p><b>Crack fill</b> is priced and costed by the linear foot. <b>Striping</b> is priced per stall / ADA stall / curb foot, and the paint usage is computed from the line length those stalls lay down.</p>
+      <p><b>Labor</b> comes from your production rates: sealing sq ft per crew-hour (a second coat takes 70% longer than one, not double — the lot is already prepped and edged), crack-fill feet per hour, striping feet per hour, plus your setup/mobilization time, times crew size times your labor rate.</p>
+      <p><b>Good / Better / Best:</b> Good = 1 coat standard sealer. Better = 2 coats standard. Best = 2 coats premium sealer. Crack fill, striping, and extras are identical on all three — only the sealing changes, which is the honest way to present the choice.</p>
+      <p><b>Profit</b> = price (before tax) minus material, labor, and your other job costs. If a job's margin falls under 15%, SealBook flags it so you see it before you book the work, not after.</p>
+      <h3>What SealBook does not do</h3>
+      <p>It does not measure lots from satellite photos — measure the lot (wheel, tape, or the customer's plat) and enter the square footage. It has no account, no sync, and no online booking: it is one file, on your device, that works in a parking lot with no signal. That is the point.</p>
+      <h3>Getting your numbers right</h3>
+      <p>The defaults are national planning numbers (85 sq ft/gal/coat coverage, $3.10/gal bulk standard sealer, $0.17/sq ft one-coat / $0.27 two-coat). Spend ten minutes in Settings making them yours: your actual sealer price per gallon, your coverage on your lots, your crew's real production. Then check the first few jobs' actual profit in the Job Book and tune.</p>
+    </div>
+  </section>
+</main>
+
+<footer>SealBook — one file, offline, no subscription. Your data never leaves this device.</footer>
+<div id="printArea"></div>
+
+<script>
+"use strict";
+/* ============ SealBook — sealcoating & striping estimator ============ */
+var LS_KEY = "sealbook.v1";
+
+function r2(n){ return Math.round((Number(n)||0)*100)/100; }
+function r1(n){ return Math.round((Number(n)||0)*10)/10; }
+function num(v, d){ var n = parseFloat(v); return (isFinite(n) && n>=0) ? n : (d||0); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function fmt(n){ var v = r2(n); var neg = v<0; var s = Math.abs(v).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ","); return (neg?"-$":"$")+s; }
+function fmtNum(n){ return String(Math.round((Number(n)||0)*10)/10).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+function todayStr(){ var d=new Date(); function p(x){return (x<10?"0":"")+x;} return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate()); }
+function uid(){ return "j"+Date.now().toString(36)+Math.floor(Math.random()*99999).toString(36); }
+
+function defaultSettings(){
+  return {
+    company:"", phone:"", email:"",
+    quoteNotes:"Lot must be clear of vehicles by start time. Price good for 30 days. Payment due on completion.",
+    sfPerGal:85, sealerStd:3.10, sealerPrem:3.95, sandPerGal:0.35,
+    crackMatLf:0.45, paintGal:28, paintCovLf:300, stallLf:20, adaLf:24,
+    rate1:0.17, rate2:0.27, premAdd:0.04, crackRate:1.50,
+    stallRate:35, adaRate:65, curbRate:1.10,
+    minCharge:250, taxPct:0,
+    laborRate:30, crewSize:2, setupHrs:0.5,
+    prodSeal:1200, prodCrack:120, prodStripe:250
+  };
+}
+
+/* ---------- pure pricing engine ---------- */
+function sealRateFor(coats, premium, s){
+  var base = coats>=2 ? s.rate2 : s.rate1;
+  return premium ? base + s.premAdd : base;
+}
+function calcJob(inp, s){
+  var sqft = num(inp.sqft), coats = inp.coats>=2?2:1, premium = !!inp.premium;
+  var crackLf = num(inp.crackLf), stalls = Math.floor(num(inp.stalls)), ada = Math.floor(num(inp.adaStalls));
+  var curbLf = num(inp.curbLf), other = num(inp.otherCosts);
+  var extras = (inp.extras||[]).map(function(x){ return {label:String(x.label||"Extra"), amount:num(x.amount)}; });
+  var extrasTotal = r2(extras.reduce(function(a,x){return a+x.amount;},0));
+
+  /* material */
+  var gallons = sqft>0 ? (sqft*coats)/s.sfPerGal : 0;
+  var sealerCost = r2(gallons * (premium ? s.sealerPrem : s.sealerStd));
+  var sandCost = r2(gallons * s.sandPerGal);
+  var crackCost = r2(crackLf * s.crackMatLf);
+  var paintLf = stalls*s.stallLf + ada*s.adaLf + curbLf;
+  var paintGal = paintLf>0 ? paintLf/s.paintCovLf : 0;
+  var paintCost = r2(paintGal * s.paintGal);
+  var material = r2(sealerCost + sandCost + crackCost + paintCost);
+
+  /* labor */
+  var sealH = sqft>0 ? (sqft/s.prodSeal) * (coats>=2 ? 1.7 : 1) : 0;
+  var crackH = crackLf>0 ? crackLf/s.prodCrack : 0;
+  var stripeH = paintLf>0 ? paintLf/s.prodStripe : 0;
+  var hasWork = (sqft>0 || crackLf>0 || paintLf>0 || extrasTotal>0);
+  var setupH = hasWork ? s.setupHrs : 0;
+  var hours = sealH + crackH + stripeH + setupH;
+  var labor = r2(hours * s.crewSize * s.laborRate);
+
+  var totalCost = r2(material + labor + other);
+
+  /* price */
+  var sealPrice = r2(sqft * sealRateFor(coats, premium, s));
+  var crackPrice = r2(crackLf * s.crackRate);
+  var stripePrice = r2(stalls*s.stallRate + ada*s.adaRate + curbLf*s.curbRate);
+  var subtotal = r2(sealPrice + crackPrice + stripePrice + extrasTotal);
+  var minLifted = false;
+  if (subtotal>0 && subtotal < s.minCharge){ subtotal = s.minCharge; minLifted = true; }
+  var tax = r2(subtotal * s.taxPct/100);
+  var total = r2(subtotal + tax);
+  var profit = r2(subtotal - totalCost);
+  var margin = subtotal>0 ? r2(profit/subtotal*100) : 0;
+
+  return {
+    sqft:sqft, coats:coats, premium:premium, crackLf:crackLf, stalls:stalls, adaStalls:ada, curbLf:curbLf,
+    extras:extras, extrasTotal:extrasTotal, otherCosts:other,
+    gallons:r1(gallons), sealerCost:sealerCost, sandCost:sandCost, crackCost:crackCost,
+    paintLf:paintLf, paintGal:r2(paintGal), paintCost:paintCost, material:material,
+    hours:r2(hours), labor:labor, totalCost:totalCost,
+    sealPrice:sealPrice, crackPrice:crackPrice, stripePrice:stripePrice,
+    subtotal:subtotal, minLifted:minLifted, tax:tax, total:total, profit:profit, margin:margin
+  };
+}
+function calcOptions(inp, s){
+  var base = {sqft:inp.sqft, crackLf:inp.crackLf, stalls:inp.stalls, adaStalls:inp.adaStalls, curbLf:inp.curbLf, extras:inp.extras, otherCosts:inp.otherCosts};
+  var g = Object.assign({}, base, {coats:1, premium:false});
+  var b = Object.assign({}, base, {coats:2, premium:false});
+  var t = Object.assign({}, base, {coats:2, premium:true});
+  return { good:calcJob(g,s), better:calcJob(b,s), best:calcJob(t,s) };
+}
+
+/* ---------- sample data ---------- */
+function seedState(){
+  var s = defaultSettings();
+  s.company = "Sample Sealcoating Co.";
+  s.phone = "555-014-2200"; s.email = "quotes@sampleseal.example";
+  var jobs = [];
+  function mk(inp, meta){
+    var c = calcJob(inp, s);
+    jobs.push(Object.assign({
+      id:uid()+jobs.length, customer:"", phone:"", address:"", date:todayStr(), status:"Quoted",
+      deposit:0, notes:"", option:"better"
+    }, meta, inp, {calc:c}));
+  }
+  mk({sqft:5000, coats:2, premium:false, crackLf:200, stalls:10, adaStalls:2, curbLf:100,
+      extras:[{label:"Oil-spot priming", amount:75}], otherCosts:40},
+     {customer:"Maple Grove Plaza", phone:"555-0119", address:"1200 Commerce Dr", status:"Booked", deposit:500, option:"better",
+      notes:"Lot must be empty by 6 AM. Stripe after second coat cures."});
+  mk({sqft:900, coats:2, premium:false, crackLf:40, stalls:0, adaStalls:0, curbLf:0, extras:[], otherCosts:15},
+     {customer:"Henderson Driveway", phone:"555-0134", address:"48 Willow Ln", status:"Quoted", deposit:0, option:"better", notes:""});
+  mk({sqft:0, coats:1, premium:false, crackLf:0, stalls:25, adaStalls:3, curbLf:200, extras:[], otherCosts:0},
+     {customer:"Riverside Church — restripe", phone:"555-0177", address:"900 River Rd", status:"Paid", deposit:1290, option:"good",
+      notes:"Restripe only, no sealing. Done and paid in full."});
+  return { settings:s, jobs:jobs, seeded:true };
+}
+
+/* ---------- state ---------- */
+var state = null;
+function sanitizeJob(j){
+  if (!j || typeof j!=="object") return null;
+  var inp = {
+    sqft:num(j.sqft), coats:(j.coats>=2?2:1), premium:!!j.premium,
+    crackLf:num(j.crackLf), stalls:Math.floor(num(j.stalls)), adaStalls:Math.floor(num(j.adaStalls)),
+    curbLf:num(j.curbLf), otherCosts:num(j.otherCosts),
+    extras:Array.isArray(j.extras)? j.extras.filter(function(x){return x&&typeof x==="object";}).map(function(x){return {label:String(x.label||"Extra").slice(0,80), amount:num(x.amount)};}) : []
+  };
+  var st = ["Quoted","Booked","Done","Paid"].indexOf(j.status)>=0 ? j.status : "Quoted";
+  return Object.assign({
+    id:String(j.id||uid()), customer:String(j.customer||"").slice(0,120), phone:String(j.phone||"").slice(0,40),
+    address:String(j.address||"").slice(0,160), date:/^\d{4}-\d{2}-\d{2}$/.test(j.date||"")? j.date : todayStr(),
+    status:st, deposit:num(j.deposit), notes:String(j.notes||"").slice(0,1000),
+    option:["good","better","best"].indexOf(j.option)>=0? j.option : "better"
+  }, inp);
+}
+function sanitizeState(raw){
+  var d = defaultSettings();
+  if (!raw || typeof raw!=="object") return { settings:d, jobs:[], seeded:false };
+  var s = Object.assign({}, d);
+  if (raw.settings && typeof raw.settings==="object"){
+    Object.keys(d).forEach(function(k){
+      var v = raw.settings[k];
+      if (typeof d[k]==="number"){ if (isFinite(parseFloat(v)) && parseFloat(v)>=0) s[k]=parseFloat(v); }
+      else if (typeof v==="string") s[k]=v.slice(0,2000);
+    });
+    if (!(s.sfPerGal>0)) s.sfPerGal = d.sfPerGal;
+    if (!(s.paintCovLf>0)) s.paintCovLf = d.paintCovLf;
+    if (!(s.prodSeal>0)) s.prodSeal = d.prodSeal;
+    if (!(s.prodCrack>0)) s.prodCrack = d.prodCrack;
+    if (!(s.prodStripe>0)) s.prodStripe = d.prodStripe;
+    if (!(s.crewSize>=1)) s.crewSize = 1;
+  }
+  var jobs = Array.isArray(raw.jobs) ? raw.jobs.map(sanitizeJob).filter(Boolean) : [];
+  jobs.forEach(function(j){ j.calc = calcJob(j, s); });
+  return { settings:s, jobs:jobs, seeded:!!raw.seeded, legal: raw.legal || null };
+}
+function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
+function load(){
+  try{
+    var raw = localStorage.getItem(LS_KEY);
+    if (raw){ state = sanitizeState(JSON.parse(raw)); return; }
+  }catch(e){}
+  state = seedState(); save();
+}
+
+/* ---------- UI ---------- */
+var $ = function(id){ return document.getElementById(id); };
+var curTab = "dash", estExtras = [], estOption = "better", detailId = null;
+
+function showTab(t){
+  curTab = t;
+  ["dash","est","jobs","settings","help"].forEach(function(k){
+    $("view-"+k).style.display = (k===t)?"":"none";
+  });
+  var btns = $("tabs").querySelectorAll("button");
+  for (var i=0;i<btns.length;i++) btns[i].className = (btns[i].getAttribute("data-tab")===t)?"on":"";
+  if (t==="dash") renderDash();
+  if (t==="jobs") renderJobs();
+  if (t==="est") renderEst();
+  if (t==="settings") renderSettings();
+}
+function jobCollected(j){ return j.status==="Paid" ? j.calc.total : Math.min(num(j.deposit), j.calc.total); }
+function jobBalance(j){ return r2(j.calc.total - jobCollected(j)); }
+
+function renderDash(){
+  var jobs = state.jobs;
+  var quoted = jobs.filter(function(j){return j.status==="Quoted";});
+  var booked = jobs.filter(function(j){return j.status==="Booked";});
+  var done = jobs.filter(function(j){return j.status==="Done"||j.status==="Paid";});
+  var pipeline = r2(quoted.reduce(function(a,j){return a+j.calc.total;},0) + booked.reduce(function(a,j){return a+j.calc.total;},0));
+  var collected = r2(jobs.reduce(function(a,j){return a+jobCollected(j);},0));
+  var owed = r2(jobs.reduce(function(a,j){return a+jobBalance(j);},0));
+  var profit = r2(done.reduce(function(a,j){return a+j.calc.profit;},0));
+  var stats = [
+    ["Pipeline (quoted + booked)", fmt(pipeline)],
+    ["Collected", fmt(collected)],
+    ["Still owed", fmt(owed)],
+    ["Profit on finished jobs", fmt(profit)],
+    ["Jobs in book", String(jobs.length)],
+    ["Booked jobs", String(booked.length)]
+  ];
+  $("dashStats").innerHTML = stats.map(function(x){ return '<div class="stat"><div class="v">'+esc(x[1])+'</div><div class="l">'+esc(x[0])+'</div></div>'; }).join("");
+  var up = booked.slice().sort(function(a,b){return a.date<b.date?-1:1;});
+  $("dashUpcoming").innerHTML = up.length ? '<table><tr><th>Date</th><th>Customer</th><th class="num">Total</th><th class="num">Balance</th></tr>'+
+    up.map(function(j){ return '<tr><td>'+esc(j.date)+'</td><td>'+esc(j.customer)+'</td><td class="num">'+fmt(j.calc.total)+'</td><td class="num">'+fmt(jobBalance(j))+'</td></tr>'; }).join("")+'</table>'
+    : '<p class="mut">No booked jobs yet. Save an estimate and mark it Booked.</p>';
+  var rec = jobs.slice(-5).reverse();
+  $("dashRecent").innerHTML = rec.length ? '<table><tr><th>Customer</th><th>Status</th><th class="num">Total</th><th class="num">Profit</th></tr>'+
+    rec.map(function(j){ return '<tr><td>'+esc(j.customer)+'</td><td><span class="pill '+j.status.toLowerCase()+'">'+j.status+'</span></td><td class="num">'+fmt(j.calc.total)+'</td><td class="num">'+fmt(j.calc.profit)+'</td></tr>'; }).join("")+'</table>'
+    : '<p class="mut">No jobs yet.</p>';
+}
+
+function readEstInputs(){
+  return {
+    sqft:num($("eSqft").value), crackLf:num($("eCrack").value),
+    stalls:Math.floor(num($("eStalls").value)), adaStalls:Math.floor(num($("eAda").value)),
+    curbLf:num($("eCurb").value), otherCosts:num($("eOther").value),
+    extras:estExtras.slice()
+  };
+}
+function optionLabel(k){ return k==="good" ? "Good — 1 coat" : (k==="best" ? "Best — 2 coats, premium" : "Better — 2 coats"); }
+function renderEst(){
+  var inp = readEstInputs();
+  var opts = calcOptions(inp, state.settings);
+  $("optCards").innerHTML = ["good","better","best"].map(function(k){
+    var o = opts[k];
+    return '<div class="opt'+(estOption===k?" sel":"")+'" data-opt="'+k+'"><div class="n">'+optionLabel(k)+'</div>'+
+      '<div class="p">'+fmt(o.total)+'</div>'+
+      '<div class="mut">Profit '+fmt(o.profit)+' ('+o.margin+'%) · Sealer '+o.gallons+' gal</div></div>';
+  }).join("");
+  var cards = $("optCards").querySelectorAll(".opt");
+  for (var i=0;i<cards.length;i++){
+    cards[i].addEventListener("click", function(){ estOption = this.getAttribute("data-opt"); renderEst(); });
+  }
+  var c = opts[estOption];
+  var rows = [
+    ["Sealer needed", fmtNum(c.gallons)+" gal ("+c.coats+" coat"+(c.coats>1?"s":"")+", "+(c.premium?"premium":"standard")+")"],
+    ["Sealer + sand cost", fmt(c.sealerCost + c.sandCost)],
+    ["Crack filler material ("+fmtNum(c.crackLf)+" lf)", fmt(c.crackCost)],
+    ["Paint ("+fmtNum(c.paintLf)+" lf of line)", fmt(c.paintCost)],
+    ["Material total", fmt(c.material)],
+    ["Labor ("+c.hours+" crew-hrs × "+state.settings.crewSize+" crew)", fmt(c.labor)],
+    ["Other job costs", fmt(c.otherCosts)],
+    ["Your total cost", fmt(c.totalCost)]
+  ];
+  var price = [
+    ["Sealing "+fmtNum(c.sqft)+" sq ft", fmt(c.sealPrice)],
+    ["Crack fill "+fmtNum(c.crackLf)+" lf", fmt(c.crackPrice)],
+    ["Striping", fmt(c.stripePrice)]
+  ];
+  if (c.extrasTotal>0) price.push(["Extras", fmt(c.extrasTotal)]);
+  if (c.minLifted) price.push(["Minimum charge applied", "yes"]);
+  var html = rows.map(function(r){ return '<div class="kv"><span>'+esc(r[0])+'</span><b>'+esc(r[1])+'</b></div>'; }).join("");
+  html += '<h3 style="margin-top:14px">Price</h3>' + price.map(function(r){ return '<div class="kv"><span>'+esc(r[0])+'</span><b>'+esc(r[1])+'</b></div>'; }).join("");
+  html += '<div class="kv"><span>Subtotal</span><b>'+fmt(c.subtotal)+'</b></div>';
+  if (c.tax>0) html += '<div class="kv"><span>Tax</span><b>'+fmt(c.tax)+'</b></div>';
+  html += '<div class="kv total"><span>Total</span><b>'+fmt(c.total)+'</b></div>';
+  html += '<div class="kv"><span>Your profit</span><b class="'+(c.profit>=0?"pos":"neg")+'">'+fmt(c.profit)+' ('+c.margin+'%)</b></div>';
+  $("breakdown").innerHTML = html;
+  $("estWarn").innerHTML =
+    (c.subtotal>0 && c.margin<15) ? '<div class="warnbox">Thin margin: this option prices at '+c.margin+'% profit. Check your rates in Settings before booking it.</div>' : "";
+  $("extrasList").innerHTML = estExtras.length ? '<table><tr><th>Extra</th><th class="num">Amount</th><th></th></tr>'+
+    estExtras.map(function(x,i){ return '<tr><td>'+esc(x.label)+'</td><td class="num">'+fmt(x.amount)+'</td><td class="num"><button class="btn ghost sm" data-rmx="'+i+'" type="button">Remove</button></td></tr>'; }).join("")+'</table>' : "";
+  var rm = $("extrasList").querySelectorAll("[data-rmx]");
+  for (var j=0;j<rm.length;j++) rm[j].addEventListener("click", function(){ estExtras.splice(parseInt(this.getAttribute("data-rmx"),10),1); renderEst(); });
+}
+
+function saveJobFromEst(){
+  var customer = $("eCustomer").value.trim();
+  if (!customer){ alert("Enter a customer name first."); return; }
+  var inp = readEstInputs();
+  var coats = estOption==="good"?1:2, premium = estOption==="best";
+  var full = Object.assign({}, inp, {coats:coats, premium:premium});
+  var job = sanitizeJob(Object.assign({
+    id:uid(), customer:customer, phone:$("ePhone").value.trim(), address:$("eAddress").value.trim(),
+    date:$("eDate").value || todayStr(), status:"Quoted", deposit:0, notes:$("eNotes").value.trim(), option:estOption
+  }, full));
+  job.calc = calcJob(job, state.settings);
+  state.jobs.push(job); save();
+  estExtras = []; $("eCustomer").value=""; $("ePhone").value=""; $("eAddress").value=""; $("eNotes").value="";
+  $("eSqft").value=0; $("eCrack").value=0; $("eStalls").value=0; $("eAda").value=0; $("eCurb").value=0; $("eOther").value=0;
+  showTab("jobs");
+}
+
+function renderJobs(){
+  var f = $("jobFilter").value;
+  var list = state.jobs.filter(function(j){ return !f || j.status===f; }).slice().reverse();
+  $("jobList").innerHTML = list.length ? '<table><tr><th>Customer</th><th>Date</th><th>Status</th><th class="num">Total</th><th class="num">Balance</th><th></th></tr>'+
+    list.map(function(j){ return '<tr><td>'+esc(j.customer)+'</td><td>'+esc(j.date)+'</td><td><span class="pill '+j.status.toLowerCase()+'">'+j.status+'</span></td><td class="num">'+fmt(j.calc.total)+'</td><td class="num">'+fmt(jobBalance(j))+'</td><td class="num"><button class="btn ghost sm" data-open="'+esc(j.id)+'" type="button">Open</button></td></tr>'; }).join("")+'</table>'
+    : '<p class="mut">No jobs match.</p>';
+  var btns = $("jobList").querySelectorAll("[data-open]");
+  for (var i=0;i<btns.length;i++) btns[i].addEventListener("click", function(){ detailId = this.getAttribute("data-open"); renderDetail(); });
+  if (detailId) renderDetail();
+}
+function renderDetail(){
+  var j = null;
+  for (var i=0;i<state.jobs.length;i++) if (state.jobs[i].id===detailId) j = state.jobs[i];
+  if (!j){ $("jobDetail").style.display="none"; return; }
+  var c = j.calc;
+  var lines = [
+    ["Work", (c.sqft>0? fmtNum(c.sqft)+" sq ft sealing, "+c.coats+" coat"+(c.coats>1?"s":"")+(c.premium?", premium":"") : "No sealing") +
+      (c.crackLf>0? " · "+fmtNum(c.crackLf)+" lf crack fill":"") +
+      (c.paintLf>0? " · "+j.stalls+" stalls, "+j.adaStalls+" ADA, "+fmtNum(j.curbLf)+" lf curb":"")],
+    ["Sealer", fmtNum(c.gallons)+" gal — "+fmt(c.sealerCost + c.sandCost)+" incl. sand"],
+    ["Material total", fmt(c.material)],
+    ["Labor", c.hours+" crew-hrs — "+fmt(c.labor)],
+    ["Other costs", fmt(c.otherCosts)],
+    ["Your cost", fmt(c.totalCost)],
+    ["Price (subtotal)", fmt(c.subtotal)],
+    ["Tax", fmt(c.tax)],
+    ["Total", fmt(c.total)],
+    ["Profit", fmt(c.profit)+" ("+c.margin+"%)"],
+    ["Deposit / collected", fmt(jobCollected(j))],
+    ["Balance owed", fmt(jobBalance(j))]
+  ];
+  $("jobDetail").style.display = "";
+  $("jobDetail").innerHTML = '<h2>'+esc(j.customer)+'</h2>'+
+    '<p class="mut">'+esc(j.address)+' · '+esc(j.phone)+' · '+esc(j.date)+' · Option: '+optionLabel(j.option)+'</p>'+
+    (j.notes? '<p>'+esc(j.notes)+'</p>':"")+
+    (j.extras.length? '<p class="mut">Extras: '+j.extras.map(function(x){return esc(x.label)+" "+fmt(x.amount);}).join("; ")+'</p>':"")+
+    lines.map(function(r){ return '<div class="kv"><span>'+esc(r[0])+'</span><b>'+esc(r[1])+'</b></div>'; }).join("")+
+    '<div class="cols" style="margin-top:10px"><div><label>Status</label><select id="dStatus">'+
+      ["Quoted","Booked","Done","Paid"].map(function(st){ return '<option'+(j.status===st?" selected":"")+'>'+st+'</option>'; }).join("")+'</select></div>'+
+    '<div><label>Deposit collected ($)</label><input inputmode="decimal" id="dDeposit" type="number" min="0" step="any" value="'+j.deposit+'"></div></div>'+
+    '<p style="margin-top:12px"><button class="btn acc" id="dSave" type="button">Save changes</button> '+
+    '<button class="btn ghost" id="dPrint" type="button">Print quote sheet</button> '+
+    '<button class="btn danger" id="dDelete" type="button">Delete job</button></p>';
+  $("dSave").addEventListener("click", function(){
+    j.status = $("dStatus").value; j.deposit = num($("dDeposit").value); save(); renderJobs(); renderDetail();
+  });
+  $("dPrint").addEventListener("click", function(){ printJob(j); });
+  $("dDelete").addEventListener("click", function(){
+    if (confirm("Delete this job?")){ state.jobs = state.jobs.filter(function(x){return x.id!==j.id;}); detailId=null; save(); $("jobDetail").style.display="none"; renderJobs(); }
+  });
+}
+
+function quoteHTML(j){
+  var s = state.settings, c = j.calc;
+  var items = "";
+  if (c.sealPrice>0) items += '<tr><td>Sealcoating — '+fmtNum(c.sqft)+' sq ft, '+c.coats+' coat'+(c.coats>1?"s":"")+(c.premium?", premium sealer":"")+'</td><td class="num">'+fmt(c.sealPrice)+'</td></tr>';
+  if (c.crackPrice>0) items += '<tr><td>Crack filling — '+fmtNum(c.crackLf)+' linear ft</td><td class="num">'+fmt(c.crackPrice)+'</td></tr>';
+  if (c.stripePrice>0) items += '<tr><td>Striping — '+j.stalls+' stalls, '+j.adaStalls+' ADA stalls, '+fmtNum(j.curbLf)+' lf curb/line</td><td class="num">'+fmt(c.stripePrice)+'</td></tr>';
+  j.extras.forEach(function(x){ items += '<tr><td>'+esc(x.label)+'</td><td class="num">'+fmt(x.amount)+'</td></tr>'; });
+  if (c.minLifted) items += '<tr><td>Minimum service charge applied</td><td class="num"></td></tr>';
+  return '<h1>'+esc(s.company||"Sealcoating Quote")+'</h1>'+
+    '<p>'+esc(s.phone)+(s.email? " · "+esc(s.email):"")+'</p>'+
+    '<h3>Quote for '+esc(j.customer)+'</h3><p>'+esc(j.address)+' · Date: '+esc(j.date)+'</p>'+
+    '<table><tr><th>Description</th><th class="num">Amount</th></tr>'+items+
+    '<tr><td>Subtotal</td><td class="num">'+fmt(c.subtotal)+'</td></tr>'+
+    (c.tax>0? '<tr><td>Tax</td><td class="num">'+fmt(c.tax)+'</td></tr>':"")+
+    '<tr><td><b>Total</b></td><td class="num"><b>'+fmt(c.total)+'</b></td></tr></table>'+
+    '<p>'+esc(s.quoteNotes)+'</p>';
+}
+function printJob(j){ $("printArea").innerHTML = quoteHTML(j); window.print(); }
+function printEstQuote(){
+  var inp = readEstInputs();
+  var coats = estOption==="good"?1:2, premium = estOption==="best";
+  var job = sanitizeJob(Object.assign({ id:"tmp", customer:$("eCustomer").value.trim()||"Customer", phone:$("ePhone").value.trim(),
+    address:$("eAddress").value.trim(), date:$("eDate").value||todayStr(), status:"Quoted", deposit:0, notes:"", option:estOption },
+    inp, {coats:coats, premium:premium}));
+  job.calc = calcJob(job, state.settings);
+  printJob(job);
+}
+
+/* ---------- settings ---------- */
+var SET_FIELDS = [
+  ["sCompany","company","t"],["sPhone","phone","t"],["sEmail","email","t"],["sQuoteNotes","quoteNotes","t"],
+  ["sSfPerGal","sfPerGal","n"],["sSealerStd","sealerStd","n"],["sSealerPrem","sealerPrem","n"],["sSand","sandPerGal","n"],
+  ["sCrackMat","crackMatLf","n"],["sPaintGal","paintGal","n"],["sPaintCov","paintCovLf","n"],["sStallLf","stallLf","n"],["sAdaLf","adaLf","n"],
+  ["sRate1","rate1","n"],["sRate2","rate2","n"],["sPremAdd","premAdd","n"],["sCrackRate","crackRate","n"],
+  ["sStallRate","stallRate","n"],["sAdaRate","adaRate","n"],["sCurbRate","curbRate","n"],["sMinCharge","minCharge","n"],["sTax","taxPct","n"],
+  ["sLaborRate","laborRate","n"],["sCrew","crewSize","n"],["sSetup","setupHrs","n"],
+  ["sProdSeal","prodSeal","n"],["sProdCrack","prodCrack","n"],["sProdStripe","prodStripe","n"]
+];
+function renderSettings(){
+  SET_FIELDS.forEach(function(f){ $(f[0]).value = state.settings[f[1]]; });
+}
+function saveSettings(){
+  SET_FIELDS.forEach(function(f){
+    if (f[2]==="t") state.settings[f[1]] = $(f[0]).value.slice(0,2000);
+    else state.settings[f[1]] = num($(f[0]).value);
+  });
+  var d = defaultSettings();
+  if (!(state.settings.sfPerGal>0)) state.settings.sfPerGal = d.sfPerGal;
+  if (!(state.settings.paintCovLf>0)) state.settings.paintCovLf = d.paintCovLf;
+  if (!(state.settings.prodSeal>0)) state.settings.prodSeal = d.prodSeal;
+  if (!(state.settings.prodCrack>0)) state.settings.prodCrack = d.prodCrack;
+  if (!(state.settings.prodStripe>0)) state.settings.prodStripe = d.prodStripe;
+  if (!(state.settings.crewSize>=1)) state.settings.crewSize = 1;
+  state.jobs.forEach(function(j){ j.calc = calcJob(j, state.settings); });
+  save(); alert("Settings saved. Job totals recalculated with the new rates.");
+}
+
+/* ---------- wire-up ---------- */
+function init(){
+  load();
+  $("tabs").addEventListener("click", function(e){
+    var b = e.target && e.target.getAttribute && e.target.getAttribute("data-tab") ? e.target : null;
+    if (b) showTab(b.getAttribute("data-tab"));
+  });
+  ["eSqft","eCrack","eStalls","eAda","eCurb","eOther"].forEach(function(id){ $(id).addEventListener("input", renderEst); });
+  $("addExtraBtn").addEventListener("click", function(){
+    var label = $("xLabel").value.trim(); var amt = num($("xAmount").value);
+    if (!label && amt<=0) return;
+    estExtras.push({label:label||"Extra", amount:amt}); $("xLabel").value=""; $("xAmount").value=0; renderEst();
+  });
+  $("saveJobBtn").addEventListener("click", saveJobFromEst);
+  $("printQuoteBtn").addEventListener("click", printEstQuote);
+  $("jobFilter").addEventListener("change", renderJobs);
+  $("saveSettingsBtn").addEventListener("click", saveSettings);
+  $("exportBtn").addEventListener("click", function(){
+    var blob = new Blob([JSON.stringify(state,null,2)], {type:"application/json"});
+    var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "sealbook-backup.json";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  });
+  $("importBtn").addEventListener("click", function(){ $("importFile").click(); });
+  $("importFile").addEventListener("change", function(){
+    var f = this.files && this.files[0]; if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function(){
+      try{ state = sanitizeState(JSON.parse(rd.result)); save(); detailId=null; showTab("dash"); alert("Backup imported."); }
+      catch(e){ alert("That file could not be imported. Nothing was changed."); }
+    };
+    rd.readAsText(f); this.value = "";
+  });
+  $("clearDemoBtn").addEventListener("click", function(){
+    if (state.seeded){ state.jobs = []; state.seeded = false; save(); showTab("dash"); }
+    else alert("Sample data already cleared.");
+  });
+  $("wipeBtn").addEventListener("click", function(){
+    if (confirm("Erase ALL SealBook data (jobs and settings) on this device?")){
+      state = { settings:defaultSettings(), jobs:[], seeded:false }; detailId=null; save(); showTab("dash");
+    }
+  });
+  $("eDate").value = todayStr();
+  showTab("dash");
+}
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
+
+/* exposed for testing */
+window.SB = { calcJob:calcJob, calcOptions:calcOptions, defaultSettings:defaultSettings, sanitizeState:sanitizeState,
+  seedState:seedState, r2:r2, fmt:fmt, getState:function(){return state;}, LS_KEY:LS_KEY };
+</script>
+
+<!-- ===== White Wolf Digital legal pattern (Terms v1.0) ===== -->
+<style>
+#legalOverlay{position:fixed;inset:0;z-index:99999;background:rgba(10,12,16,.72);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:18px 12px}
+#legalOverlay .legal-box{background:#fff;color:#14181f;max-width:560px;width:100%;border-radius:14px;padding:22px 20px;margin:auto;box-shadow:0 12px 40px rgba(0,0,0,.4);position:relative}
+#legalOverlay h2{margin:0 0 2px;font-size:22px}
+#legalOverlay h3{margin:0 0 12px;font-size:17px}
+#legalOverlay .legal-sum{font-size:16px;line-height:1.55;margin:10px 0}
+#legalOverlay .legal-sum p{margin:4px 0;font-weight:600}
+#legalOverlay .legal-note{background:#fff4d6;border:1px solid #e5c96a;border-radius:8px;padding:8px 10px;margin:8px 0;font-size:14px}
+#legalAgreeBtn{min-height:52px;width:100%;font-size:17px;font-weight:700;margin-top:14px;cursor:pointer}
+#legalAgreeBtn:disabled{opacity:.45;cursor:not-allowed}
+#legalOverlay .legal-check{display:flex;gap:10px;align-items:flex-start;margin-top:16px;font-size:15px;line-height:1.45;cursor:pointer;text-align:left}
+#legalOverlay .legal-check input{width:22px;height:22px;min-width:22px;margin:2px 0 0;cursor:pointer}
+#legalOverlay .legal-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+#legalOverlay .legal-row button{min-height:48px;flex:1 1 200px;cursor:pointer;font-size:15px}
+#legalFullView{position:absolute;inset:0;background:#fff;border-radius:14px;display:none;flex-direction:column;overflow:hidden}
+#legalFullView .legal-full-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #ddd}
+#legalFullText{overflow:auto;padding:14px 18px;font-size:14.5px;line-height:1.55;text-align:left}
+#legalBackBtn{min-height:48px;min-width:88px;cursor:pointer;font-size:15px;font-weight:700}
+#legalCard{text-align:left;font-size:14.5px;line-height:1.55}
+#legalCard h3{margin:16px 0 6px}
+#legalCard ul{margin:6px 0 6px 18px;padding:0}
+#legalPageBtn{min-height:48px;cursor:pointer;font-size:15px;font-weight:700;width:100%}
+.legal-scrollbox{max-height:46vh;overflow:auto;border:1px solid #ddd;border-radius:8px;padding:10px 14px;margin-top:8px}
+</style>
+<script>
+"use strict";
+/* ===== Legal pattern: first-run Terms acceptance + Settings > Legal ===== */
+var TERMS_VERSION = "1.0";
+var LEGAL_APP_NAME = "SealBook";
+var LEGAL_KEY = "sealbook.v1";
+var LEGAL_KEYS = ["sealbook.v1"];
+var LEGAL_GLOBAL = "state";
+var LEGAL_HAS_DISCLAIMER = true;
+var LEGAL_SETTINGS_SEL = "#view-settings";
+var LEGAL_TERMS_HTML = "<h2>Terms of Use \u2014 White Wolf Digital Apps</h2>\n<p><strong>Version 1.0 (DRAFT \u2014 pending attorney review)</strong> <strong>Seller: White Wolf Tree Service LLC, selling digital products under the name &quot;White Wolf Digital&quot;</strong> <strong>Contact: whitewolfoklahoma@gmail.com</strong></p>\n<h3>1. What you&#x27;re buying</h3>\n<p>Our apps (including ForgeFit AI, ForgeKitchen, TreeBid Pro, SnowBid, WashPrice Pro, RoofSquares, JobProfit Tracker, PastureLedger, and the other titles sold under White Wolf Digital) are single-file software tools. When you buy one, you are buying a <strong>license to use the file</strong>, not ownership of the software itself.</p>\n<h3>2. Your license</h3>\n<ul>\n<li>You may use the app for your own personal or business work.</li>\n<li>You may open it on your own devices (phone, tablet, computer) and move your own data between them using the app&#x27;s built-in backup/export tools.</li>\n<li>You may <strong>not</strong> resell, redistribute, give away, upload, or share the app file (or a copy of it) with anyone else \u2014 including posting it online, bundling it with other products, or selling access to it.</li>\n<li>You may <strong>not</strong> claim the app as your own work, remove its branding or notices, or use it to build a competing product for resale.</li>\n<li>One purchase = one buyer. A business purchase covers the buyer and their own employees using it for that business&#x27;s work; it does not cover other businesses.</li>\n</ul>\n<h3>3. Your data stays yours \u2014 and stays on your device</h3>\n<ul>\n<li>The current versions of our apps run <strong>entirely on your device</strong>. They have no accounts, no sign-in, no analytics, and they collect, transmit, and store <strong>none</strong> of your information on any server. We never see your data.</li>\n<li>Your records are stored in your browser/app storage on your device. **You are responsible for backing them up** using the app&#x27;s export tools. If you clear your browser data, lose your device, or uninstall the app, your records may be permanently lost, and we cannot recover them \u2014 we never had a copy.</li>\n<li>Files you export (backups, quotes, PDFs) are under your control. Where you store or send them is up to you.</li>\n</ul>\n<h3>4. Estimates are tools, not guarantees</h3>\n<p>Every number our apps produce \u2014 bids, prices, costs, calorie targets, projections, schedules, totals \u2014 is an <strong>estimate generated from the information you enter and the settings you choose</strong>. Outputs are aids for your own judgment, not guarantees of price, profit, outcome, or result. You are responsible for checking any output before relying on it (see also the disclaimer that applies to your app: Health Disclaimer for fitness/nutrition apps, Estimator Disclaimer for contractor tools). If an input is wrong, the output will be wrong.</p>\n<h3>5. Acceptable use</h3>\n<p>Don&#x27;t use the apps to break the law, infringe anyone&#x27;s rights, or misrepresent quotes, invoices, or records to your own customers. For the fitness apps, the guardrails in the app (healthy-rate limits, calorie floor) are part of the product \u2014 don&#x27;t treat the app as a way around them.</p>\n<h3>6. Provided &quot;as is&quot;</h3>\n<p>The apps are provided <strong>&quot;as is&quot; and &quot;as available,&quot; without warranties of any kind</strong>, express or implied \u2014 including merchantability, fitness for a particular purpose, accuracy of calculations, and uninterrupted or error-free operation \u2014 to the maximum extent allowed by law. Software has bugs; browsers change; we work to fix problems but do not promise any app is error-free or will work on every device or browser forever.</p>\n<h3>7. Limitation of liability</h3>\n<p>To the maximum extent allowed by law:</p>\n<ul>\n<li>We are **not liable for indirect, incidental, special, or consequential damages** \u2014 including lost profits, lost or mispriced jobs, lost data, or business interruption \u2014 arising from use of the apps.</li>\n<li>Our total liability for any claim connected to an app is limited to the <strong>amount you paid for that app</strong>.</li>\n<li>Nothing in these terms limits liability that cannot legally be limited.</li>\n</ul>\n<h3>8. Refunds</h3>\n<p>Refunds are handled <strong>by the storefront you bought from, under that storefront&#x27;s policy</strong> \u2014 Gumroad&#x27;s refund policy for Gumroad purchases, and Google Play&#x27;s refund policy for Play purchases. These terms do not add to, replace, or override the storefront&#x27;s refund rules. If a file is defective and won&#x27;t open, contact us at whitewolfoklahoma@gmail.com and we&#x27;ll fix or replace the file.</p>\n<h3>9. Updates and changes to these terms</h3>\n<ul>\n<li>We may release updated versions of an app. Updates may add, change, or remove features.</li>\n<li>We may update these terms. The version you agreed to is recorded in the app (version number and date) at first-run acceptance. If terms change, the app may ask you to accept the new version once on next open. Updated terms apply going forward, not retroactively.</li>\n<li>If you don&#x27;t agree to an updated version of the terms, stop using the app.</li>\n</ul>\n<h3>10. Governing law</h3>\n<p>These terms are governed by the laws of the <strong>State of Oklahoma</strong>, USA. (Attorney to confirm governing law and venue before publication.)</p>\n<h3>11. Contact</h3>\n<p>White Wolf Tree Service LLC (White Wolf Digital) \u2014 whitewolfoklahoma@gmail.com.</p>\n<h3>CONNECTED FEATURES \u2014 takes effect only when these features ship</h3>\n<p><em>The sections below apply only to future connected features (device sync via Health Connect, AI voice logging, and the AI Goal Preview in ForgeFit). They do not apply to the current offline versions, which never transmit data.</em></p>\n<ul>\n<li><strong>Opt-in only.</strong> Connected features are off by default. Each one asks for your separate, explicit consent \u2014 on its own consent screen, in plain language \u2014 before anything leaves your device. Declining never disables the app&#x27;s offline features.</li>\n<li><strong>What gets sent.</strong> Only what the consent screen names, only when you use the feature: for example, a meal description (text, or audio only if cloud transcription is on) for AI voice logging, or the single photo you choose for an AI Goal Preview.</li>\n<li><strong>No retention by us.</strong> Our relay service passes your request to the named AI provider and keeps nothing \u2014 no copies of your photos, audio, transcripts, or entries are stored on our servers. Provider handling is described on the consent screen and in the Privacy Policy.</li>\n<li><strong>Health data stays on the device.</strong> Device sync (Health Connect) reads your health data on your phone and stores it in the app on your phone. It is not uploaded to us.</li>\n<li><strong>Allowances.</strong> Some connected features run on third-party AI services we pay for per use, so they may include a monthly allowance described in the app (for example, a set number of AI previews or voice entries per month), with optional additional credits. Allowances and pricing will be shown in the app before you use the feature; they are not a subscription unless the app says so in plain words.</li>\n<li><strong>Permissions.</strong> Connected features may request device permissions (such as Health Connect access or the microphone) at the moment you first use them. You can revoke permissions any time in your device settings; the related feature will simply stop working.</li>\n</ul>";
+var LEGAL_DISC_HTML = "<h2>Estimator Disclaimer \u2014 Contractor &amp; Trade Tools</h2>\n<p><strong>Applies to: TreeBid Pro, SnowBid, WashPrice Pro, RoofSquares, JobProfit Tracker, FieldForms Toolkit, PaintPro, FenceDeck, MarketMaker, and the other estimating/pricing tools sold under White Wolf Digital \u2014 including bundles that contain them.</strong></p>\n<h3>Estimating aids, not finished quotes</h3>\n<ul>\n<li>These apps are <strong>estimating and record-keeping aids</strong>. Every bid, price, cost, measurement, and total they produce is an **estimate based on the information and rates you enter**.</li>\n<li>**You \u2014 the business owner \u2014 are responsible for verifying everything before you quote a customer:** measurements and quantities, site conditions, your current material and labor costs, your rates and margins, taxes, permit and license requirements, disposal rules, and any contract terms.</li>\n<li>Default rates, presets, and sample data included in the apps are starting points only. They are not market prices, not industry standards, and not a recommendation of what you should charge.</li>\n<li>A saved quote keeps the prices in effect when you created it (price snapshot). Changing your presets later does not change saved quotes \u2014 and a saved quote is still your responsibility to review before sending.</li>\n</ul>\n<h3>Specific tools</h3>\n<ul>\n<li><strong>TreeBid Pro:</strong> tree work is dangerous and site-specific. Difficulty factors and presets cannot see the actual tree, lean, rot, targets, or access. Inspect every job in person before final pricing. The &quot;Invoice with Wave&quot; feature is an open-and-paste handoff \u2014 TreeBid does not connect to Wave, and the invoice you send from Wave is yours.</li>\n<li><strong>RoofSquares / measurement tools:</strong> confirm roof measurements and pitch in person or by your usual method before ordering materials.</li>\n<li><strong>SnowBid / seasonal tools:</strong> route times, snowfall amounts, and service pricing vary by storm and site; seasonal contracts are your agreement with your customer, on your terms.</li>\n<li><strong>JobProfit Tracker:</strong> profit figures depend on the costs you enter. The app is not accounting or tax software and does not replace your bookkeeper or accountant.</li>\n</ul>\n<h3>Bottom line</h3>\n<p>If an output and your judgment disagree, trust your judgment \u2014 then fix the input. We are not responsible for jobs won, lost, or mispriced based on app outputs, within the limits of the Terms of Use.</p>";
+var LEGAL_PRIVACY_HTML = "<h3>Privacy</h3><p>This app has no accounts and no sign-in. It collects no data, runs no analytics, and sends nothing anywhere &mdash; everything you enter is stored only on this device, in this browser/app storage. We never see your data. You are responsible for backing up your records with the app&rsquo;s export tools; files you export are under your control.</p>";
+var __legalRecord = null;
+var __legalOrigSet = localStorage.setItem.bind(localStorage);
+function __legalReadStored(){
+  try { var raw = localStorage.getItem(LEGAL_KEY); if(!raw) return null; var p = JSON.parse(raw); return (p && typeof p === "object") ? p : null; } catch(e){ return null; }
+}
+function __legalAdopt(rec){ if(rec && rec.termsVersion){ __legalRecord = { termsVersion: String(rec.termsVersion), acceptedDate: rec.acceptedDate || "", disclaimerShown: !!rec.disclaimerShown }; } }
+(function(){
+  var stored = __legalReadStored();
+  if (stored && stored.legal) __legalAdopt(stored.legal);
+})();
+/* Keep the acceptance inside the app's own saved state: adopt any legal record the app writes,
+   and re-attach the known record when an app save would otherwise drop it. */
+localStorage.setItem = function(k, v){
+  if (LEGAL_KEYS.indexOf(k) >= 0 && typeof v === "string"){
+    try {
+      var p = JSON.parse(v);
+      if (p && typeof p === "object" && !Array.isArray(p)){
+        if (p.legal) __legalAdopt(p.legal);
+        else if (__legalRecord && k === LEGAL_KEY){ p.legal = __legalRecord; v = JSON.stringify(p); }
+      }
+    } catch(e){}
+  }
+  return __legalOrigSet(k, v);
+};
+function __legalVersionOlder(a, b){
+  var pa = String(a||"0").split("."), pb = String(b||"0").split(".");
+  for (var i = 0; i < Math.max(pa.length, pb.length); i++){ var x = parseInt(pa[i]||"0",10)||0, y = parseInt(pb[i]||"0",10)||0; if (x < y) return true; if (x > y) return false; }
+  return false;
+}
+function __legalAcceptLine(){
+  if (__legalRecord && __legalRecord.acceptedDate) return "You agreed to Terms v" + __legalRecord.termsVersion + " on " + __legalRecord.acceptedDate + ".";
+  return "Terms acceptance not yet recorded.";
+}
+function __legalRenderAcceptLine(){
+  var el = document.getElementById("legalAcceptLine");
+  if (el) el.textContent = __legalAcceptLine();
+}
+function __legalBuildPage(){
+  var sec = document.querySelector(LEGAL_SETTINGS_SEL);
+  if (!sec || document.getElementById("legalCard")) return;
+  var wrap = document.createElement("div");
+  wrap.className = "card";
+  wrap.style.marginTop = "14px";
+  var discSection = LEGAL_HAS_DISCLAIMER ? '<h3>Estimator Disclaimer</h3><div class="legal-scrollbox">' + LEGAL_DISC_HTML + "</div>" : "";
+  wrap.innerHTML = '<h2>Legal</h2>'
+    + '<p><button type="button" id="legalPageBtn">Legal &mdash; Terms, ' + (LEGAL_HAS_DISCLAIMER ? "Disclaimer" : "") + ' &amp; Privacy</button></p>'
+    + '<div id="legalCard" style="display:none">'
+    + '<p id="legalAcceptLine"></p>'
+    + "<h3>Terms of Use</h3>" + '<div class="legal-scrollbox">' + LEGAL_TERMS_HTML + "</div>"
+    + discSection
+    + LEGAL_PRIVACY_HTML
+    + '<p><strong>Sold by:</strong> White Wolf Tree Service LLC (White Wolf Digital) &mdash; whitewolfoklahoma@gmail.com</p>'
+    + "</div>";
+  sec.appendChild(wrap);
+  document.getElementById("legalPageBtn").addEventListener("click", function(){
+    var card = document.getElementById("legalCard");
+    card.style.display = (card.style.display === "none") ? "block" : "none";
+    __legalRenderAcceptLine();
+    if (card.style.display === "block"){ try { card.scrollIntoView({block:"start"}); } catch(e){} }
+  });
+  __legalRenderAcceptLine();
+}
+function __legalShowFull(kind){
+  var fv = document.getElementById("legalFullView");
+  var ft = document.getElementById("legalFullText");
+  var fh = document.getElementById("legalFullTitle");
+  if (!fv || !ft) return;
+  if (kind === "disclaimer"){ ft.innerHTML = LEGAL_DISC_HTML; if (fh) fh.textContent = "Estimator Disclaimer"; }
+  else { ft.innerHTML = LEGAL_TERMS_HTML; if (fh) fh.textContent = "Terms of Use"; }
+  fv.style.display = "flex";
+  ft.scrollTop = 0;
+}
+function __legalMaybePrompt(){
+  var stored = __legalReadStored();
+  var rec = stored && stored.legal ? stored.legal : null;
+  if (rec) __legalAdopt(rec);
+  var need = false, updated = false;
+  if (!rec) need = true;
+  else if (__legalVersionOlder(rec.termsVersion, TERMS_VERSION)){ need = true; updated = true; }
+  var ov = document.getElementById("legalOverlay");
+  if (!ov) return;
+  if (need){
+    var note = document.getElementById("legalUpdatedNote");
+    if (note) note.style.display = updated ? "block" : "none";
+    var chk0 = document.getElementById("legalAgreeCheck");
+    var ab0 = document.getElementById("legalAgreeBtn");
+    if (chk0) chk0.checked = false;
+    if (ab0) ab0.disabled = true;
+    ov.style.display = "flex";
+  } else {
+    ov.style.display = "none";
+  }
+  __legalRenderAcceptLine();
+}
+function __legalAgree(){
+  var chkA = document.getElementById("legalAgreeCheck");
+  if (chkA && !chkA.checked) return;
+  var d = new Date();
+  var iso = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  __legalRecord = { termsVersion: TERMS_VERSION, acceptedDate: iso, disclaimerShown: LEGAL_HAS_DISCLAIMER };
+  try { var g = window[LEGAL_GLOBAL]; if (g && typeof g === "object") g.legal = __legalRecord; } catch(e){}
+  try {
+    var stored = __legalReadStored();
+    if (stored){ stored.legal = __legalRecord; __legalOrigSet(LEGAL_KEY, JSON.stringify(stored)); }
+    else { var g2 = window[LEGAL_GLOBAL]; if (g2 && typeof g2 === "object") __legalOrigSet(LEGAL_KEY, JSON.stringify(g2)); }
+  } catch(e){}
+  var ov = document.getElementById("legalOverlay");
+  if (ov) ov.style.display = "none";
+  __legalRenderAcceptLine();
+}
+function __legalBuildOverlay(){
+  if (document.getElementById("legalOverlay")) return;
+  var ov = document.createElement("div");
+  ov.id = "legalOverlay";
+  ov.style.display = "none";
+  var discBtn = LEGAL_HAS_DISCLAIMER ? '<button type="button" id="legalDisclaimerBtn">Read the Estimator Disclaimer</button>' : "";
+  var followLine = LEGAL_HAS_DISCLAIMER
+    ? "The full Terms and Disclaimer are one tap away, now and any time in Settings &rarr; Legal."
+    : "The full Terms are one tap away, now and any time in Settings &rarr; Legal.";
+  var checkLabel = LEGAL_HAS_DISCLAIMER
+    ? "I have read the disclaimer and I agree to the Terms of Use"
+    : "I have read and I agree to the Terms of Use";
+  ov.innerHTML = '<div class="legal-box" role="dialog" aria-modal="true" aria-label="Terms of Use">'
+    + "<h2>" + LEGAL_APP_NAME + "</h2><h3>Terms of Use</h3>"
+    + '<div class="legal-note" id="legalUpdatedNote" style="display:none">Our terms were updated (v' + TERMS_VERSION + ").</div>"
+    + '<div class="legal-sum"><p>Your data stays on your device.</p>'
+    + "<p>Estimates are aids, not guarantees.</p>"
+    + "<p>You're responsible for checking outputs before you rely on them.</p></div>"
+    + "<p>" + followLine + "</p>"
+    + '<div class="legal-row"><button type="button" id="legalTermsBtn">Read the full Terms</button>' + discBtn + "</div>"
+    + '<label class="legal-check"><input type="checkbox" id="legalAgreeCheck"> <span>' + checkLabel + '</span></label>'
+    + '<button type="button" id="legalAgreeBtn" disabled>I Agree</button>'
+    + '<div id="legalFullView"><div class="legal-full-head"><button type="button" id="legalBackBtn">&larr; Back</button><strong id="legalFullTitle">Terms of Use</strong></div><div id="legalFullText"></div></div>'
+    + "</div>";
+  document.body.appendChild(ov);
+  document.getElementById("legalAgreeBtn").addEventListener("click", __legalAgree);
+  var agreeChk = document.getElementById("legalAgreeCheck");
+  var agreeBtn = document.getElementById("legalAgreeBtn");
+  if (agreeChk && agreeBtn) agreeChk.addEventListener("change", function(){ agreeBtn.disabled = !agreeChk.checked; });
+  document.getElementById("legalTermsBtn").addEventListener("click", function(){ __legalShowFull("terms"); });
+  var db = document.getElementById("legalDisclaimerBtn");
+  if (db) db.addEventListener("click", function(){ __legalShowFull("disclaimer"); });
+  document.getElementById("legalBackBtn").addEventListener("click", function(){ document.getElementById("legalFullView").style.display = "none"; });
+}
+__legalBuildOverlay();
+__legalBuildPage();
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function(){ __legalBuildOverlay(); __legalBuildPage(); __legalMaybePrompt(); });
+else __legalMaybePrompt();
+</script>
+
+</body>
+</html>
